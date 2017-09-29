@@ -2,9 +2,12 @@ package edu.jsu.mcis;
 
 import java.io.*;
 import java.util.*;
+import java.lang.Object;
 import au.com.bytecode.opencsv.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 public class Converter {
 	
@@ -37,46 +40,51 @@ public class Converter {
             ]
         }  
     */
-    
-    @SuppressWarnings("unchecked")
+
+     
+	@SuppressWarnings("unchecked")
     public static String csvToJson(String csvString) {
-        JSONObject json = new JSONObject();
-		JSONArray data = new JSONArray();
-		JSONArray colHeaders = new JSONArray();
-		JSONArray rowHeaders = new JSONArray();
-		colHeaders.add("Total");
-		colHeaders.add("Assignment 1");
-		colHeaders.add("Assignment 2");
-		colHeaders.add("Exam 1");
 		
-		json.put("colHeaders", colHeaders);
-		json.put("rowHeaders", rowHeaders);
-		json.put("data", data);
-		
-		CSVParser parser = new CSVParser();
-		
-		BufferReader reader = new BufferReader(new StringReader(csvString));
-		
-		try{
-			String csvline = reader.readLine();
-				while((csvline = reader.readLine()) != null) {
-					String[] parseString = parser parseLine(csvline);
-					rowHeaders.add(parseString[0]);
-					JSONArray row = new JSONArray();
-					row.add(new Long(parseString[1]));
-					row.add(new Long(parseString[2]))
-					row.add(new Long(parseString[3]))
-					row.add(new Long(parseString[4]))
-					data.add(row);
+		try {
+			CSVReader reader = new CSVReader(new StringReader(csvString));
+			List<String[]> list = reader.readAll();
+			JSONObject json = new JSONObject();
+				
+			JSONArray colHeaders = new JSONArray();	
+				for (int i = 0; i < list.get(0).length; i++) {
+					colHeaders.add(list.get(0)[i]);
 				}
-		
+			
+			JSONArray rowHeaders = new JSONArray();
+				for (int i = 1; i < list.size(); i++) {
+					rowHeaders.add(list.get(i)[0]);
+				}
+			
+			JSONArray data = new JSONArray();
+				for (int i = 1; i < list.size(); i++) {
+					data.add(Arrays.toString(Arrays.copyOfRange(list.get(i), 1 , list.get(i).length)));
+				}
+									
+			json.put("colHeaders", colHeaders);
+			json.put("rowHeaders", rowHeaders);
+			json.put("data", data);
+			
+			String jsonFix = "";
+			jsonFix = "{\n    \"colHeaders\":" + json.get("colHeaders") + ",\n";
+            jsonFix += "    \"rowHeaders\":" + json.get("rowHeaders") + ",\n";
+			jsonFix += "    \"data\":" + 
+							json.get("data").toString().replaceAll("\"", "").replaceAll("],", "],\n            ").replaceAll(", ", ",").replace("]]", "]\n    ]") 
+							+ "\n}";
+			
+			return jsonFix;
 		}
-		catch (IOException e){}
 		
-		return json.toString();
+		catch (IOException e){};
 		
+		return null;
+	
     }
-    
+	
     public static String jsonToCsv(String jsonString) {
         JSONObject json = null;
 		
@@ -85,34 +93,33 @@ public class Converter {
 			JSONParser jParser = new JSONParser();
 			json = (JSONObject) jParser.parse(jsonString);
 		}
-		catch (IOException e){}
+		catch (Exception e){}
 		
-		String csvString = "\"ID\"," + Converter.<String>joinArray(JSONArray json.get("colHeaders")) + "\n";
+		String csvString = (Converter.<String>joinArray((JSONArray) json.get("colHeaders")) + "\n");
 		
-		JSONArray rowHeader = (JSONArray) json.get("rowHeaders"));
-		JSONArray data = (JSONArray) json.get("data"));
+		JSONArray rowHeader = (JSONArray) json.get("rowHeaders");
+		JSONArray data = (JSONArray) json.get("data");
 		
 			for(int i = 0; i < rowHeader.size(); i++){
 				
-			csvString = (csvString + "\"" + (String)rowHeader.get(i) + "\"," + Converter.<Long>joinArray(JSONArray) data.get(i)) + "\n");
+			csvString = (csvString + "\"" + (String)rowHeader.get(i) + "\"," + Converter.<Long>joinArray((JSONArray) data.get(i)) + "\n");
 
 			}
 			return csvString;
-
-	@SupressWarnings("unchecked")
-	private static <T> String joinArray(JSONArray jarray){
-		
-		String fileLine = ""; 
-			for(int i = 0; i < jarray.size(); i++){
-				fileline = (fileline + "\"" + ((T) jarray.get(i)) + "\"");
-				if(i < jarray.size() - 1){
-					fileline = fileline + ",";
-				}
-				
-				
-			}
-		return fileline;
-		
 	}
 
+	@SuppressWarnings("unchecked")
+     private static <T> String joinArray(JSONArray jarray) {
+        String fileline = "";
+        for (int i = 0; i < jarray.size(); i++) {
+            fileline += ("\"" + ((T) jarray.get(i)) + "\"");
+            if (i < jarray.size() - 1) {
+                fileline += ",";
+            }
+        }
+	return fileline;
+		
+	}
+	
+	
 }
